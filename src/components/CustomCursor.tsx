@@ -6,11 +6,18 @@ const CustomCursor = () => {
     const yLineRef = useRef<HTMLDivElement>(null);
     const coordsRef = useRef<HTMLDivElement>(null);
 
+    // Only enable on precise-pointer devices (skip touch/mobile for perf & UX)
+    const [enabled] = useState(() =>
+        typeof window !== 'undefined' &&
+        window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    );
+
     const [isHovering, setIsHovering] = useState(false);
     const [isClicking, setIsClicking] = useState(false);
     const [shots, setShots] = useState<{ id: number, x: number, y: number }[]>([]);
 
     useEffect(() => {
+        if (!enabled) return;
         const moveCursor = (e: MouseEvent) => {
             const { clientX: x, clientY: y } = e;
             
@@ -64,8 +71,11 @@ const CustomCursor = () => {
         };
     }, []);
 
+    if (!enabled) return null;
+
     return (
-        <div className="fixed inset-0 pointer-events-none z-[99999] overflow-hidden">
+        <div className="fixed inset-0 pointer-events-none z-[99999] overflow-hidden hidden md:block">
+
             {/* Bullet Impacts & Tracers */}
             {shots.map(shot => (
                 <div key={shot.id} className="absolute inset-0 pointer-events-none">

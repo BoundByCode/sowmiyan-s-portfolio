@@ -11,10 +11,12 @@ import ContentCreationSection from "@/components/ContentCreationSection";
 import MarqueeSection from "@/components/MarqueeSection";
 import PopularProjectsSlider from "@/components/PopularProjectsSlider";
 import Pattern from "@/components/Pattern";
+import SEOKeywords from "@/components/SEOKeywords";
 
 const Home = () => {
     return (
         <div className="relative min-h-screen bg-black text-white selection:bg-red-600 selection:text-white overflow-x-hidden">
+            <SEOKeywords />
             <CyberBackground />
             <FrameAnimationBackground />
             <TechNav />

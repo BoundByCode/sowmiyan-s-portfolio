@@ -1,305 +1,300 @@
 import React, { useEffect, useState } from 'react';
 import { fetchRepos, GitHubRepo } from '@/lib/github';
+import { supabase } from '@/integrations/supabase/client';
 import TechNav from '@/components/TechNav';
 import Footer from '@/components/Footer';
 import CyberBackground from '@/components/CyberBackground';
 import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
-import { fetchChannelVideos, YouTubeVideo } from '@/lib/youtube';
+import { Star, Eye, EyeOff, Trash2, Plus, Search, Lock } from 'lucide-react';
 
-const defaultTechSkills = ['Python', 'JavaScript', 'React', 'Node.js', 'TensorFlow', 'PyTorch', 'AWS', 'Docker'];
-const defaultNonTechSkills = ['Problem Solving', 'Communication', 'Team Leadership', 'Project Management', 'Public Speaking'];
+const ADMIN_PASSWORD = "121212";
+const AUTH_KEY = "adminAuthenticated";
 
 const Admin = () => {
-  const [repos, setRepos] = useState<GitHubRepo[]>([]);
-  const [hiddenIds, setHiddenIds] = useState<number[]>([]);
-  const [slideshowIds, setSlideshowIds] = useState<number[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [techSkills, setTechSkills] = useState<string[]>([]);
-  const [nonTechSkills, setNonTechSkills] = useState<string[]>([]);
-  const [newTechSkill, setNewTechSkill] = useState('');
-  const [newNonTechSkill, setNewNonTechSkill] = useState('');
-  const [ytVideos, setYtVideos] = useState<YouTubeVideo[]>([]);
-  const [hiddenYtIds, setHiddenYtIds] = useState<string[]>([]);
-  const [popularIds, setPopularIds] = useState<number[]>([]);
+    const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === "true");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
-      const data = await fetchRepos();
-      setRepos(data);
-      const saved = localStorage.getItem('hiddenProjects');
-      if (saved) setHiddenIds(JSON.parse(saved));
-      const savedFeatured = localStorage.getItem('featuredProjects');
-      if (savedFeatured) setSlideshowIds(JSON.parse(savedFeatured).slice(0, 3));
-      const savedTech = localStorage.getItem('techSkills');
-      setTechSkills(savedTech ? JSON.parse(savedTech) : defaultTechSkills);
-      const savedNonTech = localStorage.getItem('nonTechSkills');
-      setNonTechSkills(savedNonTech ? JSON.parse(savedNonTech) : defaultNonTechSkills);
+    const [repos, setRepos] = useState<GitHubRepo[]>([]);
+    const [hiddenIds, setHiddenIds] = useState<number[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [techSkills, setTechSkills] = useState<{ id: string; name: string }[]>([]);
+    const [nonTechSkills, setNonTechSkills] = useState<{ id: string; name: string }[]>([]);
+    const [newTechSkill, setNewTechSkill] = useState('');
+    const [newNonTechSkill, setNewNonTechSkill] = useState('');
+    const [search, setSearch] = useState("");
+    const [filter, setFilter] = useState<"all" | "visible" | "hidden">("all");
 
-      // Load YouTube videos
-      try {
-        const ytData = await fetchChannelVideos();
-        setYtVideos(ytData);
-      } catch (err) {
-        console.error("Failed to load YouTube videos in admin:", err);
-      }
-      const savedYt = localStorage.getItem('hiddenYouTubeVideos');
-      if (savedYt) setHiddenYtIds(JSON.parse(savedYt));
-
-      const savedPopular = localStorage.getItem('popularProjects');
-      if (savedPopular) setPopularIds(JSON.parse(savedPopular));
-
-      setLoading(false);
+    const loadData = async () => {
+        setLoading(true);
+        const [repoData, { data: hiddenRows }, { data: skillRows }] = await Promise.all([
+            fetchRepos(),
+            supabase.from('hidden_projects').select('github_repo_id'),
+            supabase.from('skills').select('id, name, category'),
+        ]);
+        setRepos(repoData);
+        setHiddenIds((hiddenRows || []).map(r => r.github_repo_id));
+        setTechSkills((skillRows || []).filter(s => s.category === 'tech').map(s => ({ id: s.id, name: s.name })));
+        setNonTechSkills((skillRows || []).filter(s => s.category === 'non-tech').map(s => ({ id: s.id, name: s.name })));
+        setLoading(false);
     };
-    load();
-  }, []);
 
-  const toggleProject = (id: number) => {
-    const isCurrentlyHidden = hiddenIds.includes(id);
-    const newHidden = isCurrentlyHidden ? hiddenIds.filter(hid => hid !== id) : [...hiddenIds, id];
-    setHiddenIds(newHidden);
-    localStorage.setItem('hiddenProjects', JSON.stringify(newHidden));
-    
-    // If hiding, also remove from featured
-    if (!isCurrentlyHidden) {
-      setSlideshowIds(prev => {
-        const updated = prev.filter(pid => pid !== id);
-        localStorage.setItem('featuredProjects', JSON.stringify(updated));
-        return updated;
-      });
-    }
-  };
+    useEffect(() => { if (authed) loadData(); }, [authed]);
 
-  const toggleFeatured = (id: number) => {
-    setSlideshowIds(prev => {
-      let updated;
-      if (prev.includes(id)) {
-        updated = prev.filter(pid => pid !== id);
-      } else {
-        if (prev.length >= 3) {
-          alert("Maximum 3 projects can be featured in the slideshow.");
-          return prev;
+    const handleLogin = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (password === ADMIN_PASSWORD) {
+            sessionStorage.setItem(AUTH_KEY, "true");
+            setAuthed(true);
+            setError("");
+        } else {
+            setError("ACCESS DENIED // INVALID KEY");
+            setPassword("");
         }
-        updated = [...prev, id];
-      }
-      localStorage.setItem('featuredProjects', JSON.stringify(updated));
-      return updated;
-    });
-  };
+    };
 
-  const toggleYtVideo = (id: string) => {
-    setHiddenYtIds(prev => {
-      const updated = prev.includes(id) ? prev.filter(vid => vid !== id) : [...prev, id];
-      localStorage.setItem('hiddenYouTubeVideos', JSON.stringify(updated));
-      return updated;
-    });
-  };
+    const logout = () => {
+        sessionStorage.removeItem(AUTH_KEY);
+        setAuthed(false);
+    };
 
-  const togglePopular = (id: number) => {
-    setPopularIds(prev => {
-      const updated = prev.includes(id) ? prev.filter(pid => pid !== id) : [...prev, id];
-      localStorage.setItem('popularProjects', JSON.stringify(updated));
-      return updated;
-    });
-  };
+    const toggleProject = async (id: number, repoName: string) => {
+        if (hiddenIds.includes(id)) {
+            await supabase.from('hidden_projects').delete().eq('github_repo_id', id);
+            setHiddenIds(prev => prev.filter(hid => hid !== id));
+        } else {
+            await supabase.from('hidden_projects').insert({ github_repo_id: id, repo_name: repoName });
+            setHiddenIds(prev => [...prev, id]);
+        }
+    };
 
-  const addTechSkill = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTechSkill.trim()) return;
-    const updated = [...techSkills, newTechSkill.trim()];
-    setTechSkills(updated);
-    localStorage.setItem('techSkills', JSON.stringify(updated));
-    setNewTechSkill('');
-  };
+    const bulkAction = async (action: "hideAll" | "showAll") => {
+        if (!confirm(`Are you sure you want to ${action === "hideAll" ? "hide" : "show"} ALL repositories?`)) return;
+        if (action === "hideAll") {
+            const toHide = repos.filter(r => !hiddenIds.includes(r.id));
+            for (const r of toHide) {
+                await supabase.from('hidden_projects').insert({ github_repo_id: r.id, repo_name: r.name });
+            }
+            setHiddenIds(repos.map(r => r.id));
+        } else {
+            await supabase.from('hidden_projects').delete().neq('github_repo_id', -1);
+            setHiddenIds([]);
+        }
+    };
 
-  const removeTechSkill = (skill: string) => {
-    const updated = techSkills.filter(s => s !== skill);
-    setTechSkills(updated);
-    localStorage.setItem('techSkills', JSON.stringify(updated));
-  };
+    const addSkill = async (e: React.FormEvent, category: 'tech' | 'non-tech') => {
+        e.preventDefault();
+        const name = category === 'tech' ? newTechSkill.trim() : newNonTechSkill.trim();
+        if (!name) return;
+        const { data } = await supabase.from('skills').insert({ name, category }).select('id, name').single();
+        if (data) {
+            if (category === 'tech') { setTechSkills(prev => [...prev, data]); setNewTechSkill(''); }
+            else { setNonTechSkills(prev => [...prev, data]); setNewNonTechSkill(''); }
+        }
+    };
 
-  const addNonTechSkill = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newNonTechSkill.trim()) return;
-    const updated = [...nonTechSkills, newNonTechSkill.trim()];
-    setNonTechSkills(updated);
-    localStorage.setItem('nonTechSkills', JSON.stringify(updated));
-    setNewNonTechSkill('');
-  };
+    const removeSkill = async (id: string, category: 'tech' | 'non-tech') => {
+        await supabase.from('skills').delete().eq('id', id);
+        if (category === 'tech') setTechSkills(prev => prev.filter(s => s.id !== id));
+        else setNonTechSkills(prev => prev.filter(s => s.id !== id));
+    };
 
-  const removeNonTechSkill = (skill: string) => {
-    const updated = nonTechSkills.filter(s => s !== skill);
-    setNonTechSkills(updated);
-    localStorage.setItem('nonTechSkills', JSON.stringify(updated));
-  };
-
-  if (loading) return (
-    <div className="min-h-screen bg-background flex items-center justify-center font-mono text-primary uppercase tracking-widest animate-pulse">
-      [ LOADING_SYSTEM_DATA... ]
-    </div>
-  );
-
-  return (
-    <div className="relative min-h-screen bg-background text-foreground overflow-x-hidden">
-      <CyberBackground />
-      <TechNav />
-      <main className="relative z-10">
-        <PageHero sectionNumber="SYS // ROOT ACCESS" title="ADMIN PANEL" subtitle="System configuration and project visibility matrix." />
-
-        <div className="px-6 pb-24">
-          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12">
-            {/* Skills Management */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="glass-strong p-8 flex flex-col gap-12"
-            >
-              <div className="flex flex-col gap-2">
-                <h2 className="text-2xl font-heading text-primary uppercase">Skills Configuration</h2>
-                <p className="text-xs font-mono text-muted-foreground uppercase">Modify technical and non-technical matrix.</p>
-              </div>
-
-              <div className="flex flex-col gap-6">
-                <h3 className="text-lg font-heading border-b border-foreground/10 pb-2">Technical Engine</h3>
-                <form onSubmit={addTechSkill} className="flex gap-4">
-                  <input type="text" value={newTechSkill} onChange={(e) => setNewTechSkill(e.target.value)} placeholder="Add Tech Skill..."
-                    className="bg-foreground/5 border border-foreground/20 p-2 font-mono text-xs w-full focus:outline-none focus:border-primary text-foreground" />
-                  <button type="submit" className="px-4 bg-primary/20 text-primary border border-primary hover:bg-primary hover:text-primary-foreground transition-colors text-xs font-mono uppercase">Add</button>
-                </form>
-                <div className="flex flex-wrap gap-2">
-                  {techSkills.map((skill, i) => (
-                    <div key={i} className="px-3 py-1 bg-foreground/5 border border-foreground/10 text-xs font-mono flex items-center gap-2 hover:border-primary transition-colors">
-                      <span>{skill}</span>
-                      <button onClick={() => removeTechSkill(skill)} className="text-primary opacity-50 hover:opacity-100 text-[10px]">X</button>
-                    </div>
-                  ))}
+    // AUTH GATE
+    if (!authed) {
+        return (
+            <div className="relative min-h-screen bg-black text-white overflow-hidden">
+                <CyberBackground />
+                <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
+                    <motion.form
+                        onSubmit={handleLogin}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="w-full max-w-md border border-red-600/30 bg-black/60 backdrop-blur-xl p-8 md:p-12 flex flex-col gap-6"
+                    >
+                        <div className="flex items-center gap-3">
+                            <Lock size={20} className="text-red-500" />
+                            <div className="flex flex-col">
+                                <span className="text-[10px] font-mono text-red-500 tracking-[0.4em] uppercase">SYS // ROOT ACCESS</span>
+                                <h1 className="text-2xl font-heading font-black uppercase tracking-tight">Authentication</h1>
+                            </div>
+                        </div>
+                        <div className="border-l-2 border-red-600 pl-3 py-1">
+                            <p className="text-[10px] font-mono opacity-60 uppercase tracking-widest">Enter security key to proceed</p>
+                        </div>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={e => setPassword(e.target.value)}
+                            autoFocus
+                            placeholder="●●●●●●"
+                            className="w-full px-4 py-4 bg-white/5 border border-white/10 text-white font-mono text-lg tracking-[0.6em] text-center focus:outline-none focus:border-red-600 transition-colors"
+                        />
+                        {error && <span className="text-[10px] font-mono text-red-500 tracking-widest text-center animate-pulse">{error}</span>}
+                        <button type="submit" className="py-4 bg-red-600 text-white font-heading font-black text-xs uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all">
+                            AUTHENTICATE →
+                        </button>
+                    </motion.form>
                 </div>
-              </div>
+            </div>
+        );
+    }
 
-              <div className="flex flex-col gap-6">
-                <h3 className="text-lg font-heading border-b border-foreground/10 pb-2">Soft Protocol</h3>
-                <form onSubmit={addNonTechSkill} className="flex gap-4">
-                  <input type="text" value={newNonTechSkill} onChange={(e) => setNewNonTechSkill(e.target.value)} placeholder="Add Non-Tech Skill..."
-                    className="bg-foreground/5 border border-foreground/20 p-2 font-mono text-xs w-full focus:outline-none focus:border-primary text-foreground" />
-                  <button type="submit" className="px-4 bg-primary/20 text-primary border border-primary hover:bg-primary hover:text-primary-foreground transition-colors text-xs font-mono uppercase">Add</button>
-                </form>
-                <div className="flex flex-wrap gap-2">
-                  {nonTechSkills.map((skill, i) => (
-                    <div key={i} className="px-3 py-1 bg-foreground/5 border border-foreground/10 text-xs font-mono flex items-center gap-2 hover:border-primary transition-colors">
-                      <span>{skill}</span>
-                      <button onClick={() => removeNonTechSkill(skill)} className="text-primary opacity-50 hover:opacity-100 text-[10px]">X</button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </motion.div>
+    const filteredRepos = repos
+        .filter(r => {
+            if (filter === "visible") return !hiddenIds.includes(r.id);
+            if (filter === "hidden") return hiddenIds.includes(r.id);
+            return true;
+        })
+        .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
-            {/* Project Visibility */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="glass-strong p-8 flex flex-col gap-8"
-            >
-              <div className="flex flex-col gap-2">
-                <h2 className="text-2xl font-heading text-primary uppercase">Project Visibility Matrix</h2>
-                <p className="text-xs font-mono text-muted-foreground uppercase">Toggle repository visibility and featured status.</p>
-              </div>
+    const visibleCount = repos.length - hiddenIds.length;
 
-              <div className="flex flex-col gap-4 overflow-y-auto max-h-[600px] pr-2 custom-scrollbar">
-                {repos.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()).map(repo => {
-                  const isHidden = hiddenIds.includes(repo.id);
-                  const isFeatured = slideshowIds.includes(repo.id);
-                  const isPopular = popularIds.includes(repo.id);
-                  return (
-                    <div key={repo.id} className={`flex flex-col gap-2 p-4 border transition-all ${isHidden ? 'border-foreground/5 opacity-40 bg-foreground/5' : 'border-primary/30 bg-primary/5 hover:border-primary/60'}`}>
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-heading font-black uppercase tracking-tight text-sm flex-1">{repo.name.replace(/-/g, ' ')}</h3>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          {isHidden && <span className="text-[8px] font-mono border border-foreground/20 px-1 uppercase opacity-40 text-primary ml-2">Archived</span>}
-                          {isFeatured && <span className="text-[8px] font-mono border border-primary px-1 uppercase text-primary ml-2">Slideshow-active</span>}
-                          {isPopular && <span className="text-[8px] font-mono border border-red-600 px-1 uppercase text-red-500 ml-2">Popular-pinned</span>}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        <div className="flex gap-2">
-                          <button onClick={() => toggleProject(repo.id)}
-                            className={`flex-1 py-1 font-mono text-[9px] uppercase border transition-all ${isHidden ? 'border-foreground/10 text-foreground/40 hover:border-primary hover:text-primary' : 'border-primary text-primary bg-background hover:bg-primary hover:text-primary-foreground'}`}>
-                            {isHidden ? 'Restore' : 'Archive'}
-                          </button>
-                          {!isHidden && (
-                            <button onClick={() => toggleFeatured(repo.id)}
-                              className={`flex-1 py-1 font-mono text-[9px] uppercase border transition-all ${isFeatured ? 'border-primary text-primary-foreground bg-primary' : 'border-primary/40 text-primary/40 hover:border-primary hover:text-primary'}`}>
-                              {isFeatured ? 'Un-Feature' : 'Feature'}
-                            </button>
-                          )}
-                        </div>
-                        {!isHidden && (
-                          <button onClick={() => togglePopular(repo.id)}
-                            className={`w-full py-1 font-mono text-[9px] uppercase border transition-all ${isPopular ? 'border-red-600 text-white bg-red-600/20 hover:bg-red-600' : 'border-primary/40 text-primary/40 hover:border-primary hover:text-primary'}`}>
-                            {isPopular ? '★ Un-pin from Popular Projects' : 'Pin to Popular Projects'}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-
-            {/* YouTube Video Visibility */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6 }}
-              className="glass-strong p-8 flex flex-col gap-8 md:col-span-2"
-            >
-              <div className="flex flex-col gap-2">
-                <h2 className="text-2xl font-heading text-primary uppercase">YouTube Video Visibility Engine</h2>
-                <p className="text-xs font-mono text-muted-foreground uppercase">Toggle YouTube video card stream visibility on the live site.</p>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                {ytVideos.map(video => {
-                  if (!video.id) return null;
-                  const isHidden = hiddenYtIds.includes(video.id);
-                  return (
-                    <div key={video.id} className={`flex flex-col gap-4 p-4 border transition-all ${isHidden ? 'border-foreground/5 opacity-40 bg-foreground/5' : 'border-primary/30 bg-primary/5 hover:border-primary/60'}`}>
-                      <div className="relative aspect-[16/9] w-full overflow-hidden border border-white/5">
-                        <img src={video.thumbnail} alt={video.title} className="w-full h-full object-cover" />
-                        <div className="absolute top-2 left-2 text-[8px] font-mono text-white bg-red-600 px-2 py-0.5 uppercase tracking-widest z-10">
-                          {video.category}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2 flex-grow">
-                        <h3 className="font-heading font-black uppercase tracking-tight text-xs line-clamp-2 leading-tight">{video.title}</h3>
-                        <p className="font-mono text-[9px] text-muted-foreground">{video.duration}</p>
-                      </div>
-                      <button 
-                        onClick={() => toggleYtVideo(video.id!)}
-                        className={`w-full py-2 font-mono text-[10px] uppercase border transition-all ${isHidden ? 'border-foreground/10 text-foreground/40 hover:border-primary hover:text-primary' : 'border-primary text-primary bg-background hover:bg-primary hover:text-primary-foreground'}`}
-                      >
-                        {isHidden ? 'Restore to Live' : 'Hide from Live'}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-
-          </div>
+    if (loading) return (
+        <div className="min-h-screen bg-black flex items-center justify-center font-mono text-red-500 uppercase tracking-widest animate-pulse">
+            [ LOADING_SYSTEM_DATA... ]
         </div>
-      </main>
-      <Footer />
+    );
 
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--primary)); }
-      `}</style>
-    </div>
-  );
+    return (
+        <div className="relative min-h-screen bg-black text-white overflow-x-hidden">
+            <CyberBackground />
+            <TechNav />
+            <main className="relative z-10">
+                <PageHero sectionNumber="SYS // ROOT ACCESS" title="ADMIN PANEL" subtitle="System configuration and project visibility matrix." />
+
+                <div className="px-4 sm:px-6 pb-24">
+                    <div className="max-w-7xl mx-auto flex flex-col gap-8">
+                        {/* Session bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 border border-red-600/30 bg-red-600/5 p-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                                <span className="text-[10px] font-mono uppercase tracking-widest text-red-500">Session Active</span>
+                            </div>
+                            <button onClick={logout} className="text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-red-500 transition-colors">
+                                Terminate Session →
+                            </button>
+                        </div>
+
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            {[
+                                { label: "Total Repos", value: repos.length },
+                                { label: "Visible", value: visibleCount },
+                                { label: "Hidden", value: hiddenIds.length },
+                                { label: "Skills", value: techSkills.length + nonTechSkills.length },
+                            ].map(s => (
+                                <div key={s.label} className="border border-white/10 bg-black/40 p-4 flex flex-col gap-1">
+                                    <span className="text-[9px] font-mono uppercase tracking-widest opacity-40">{s.label}</span>
+                                    <span className="text-2xl md:text-3xl font-heading font-black text-red-500">{s.value}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* GitHub Manager */}
+                        <motion.section
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="border border-white/10 bg-black/40 backdrop-blur-md p-6 md:p-8 flex flex-col gap-6"
+                        >
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div>
+                                    <h2 className="text-xl md:text-2xl font-heading font-black uppercase text-red-500">GitHub Manager</h2>
+                                    <p className="text-[10px] font-mono opacity-60 uppercase tracking-widest">Control repository visibility across the site.</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => bulkAction("showAll")} className="px-3 py-2 text-[9px] font-mono uppercase tracking-widest border border-white/10 hover:border-green-500 hover:text-green-500 transition-colors">Show All</button>
+                                    <button onClick={() => bulkAction("hideAll")} className="px-3 py-2 text-[9px] font-mono uppercase tracking-widest border border-white/10 hover:border-red-500 hover:text-red-500 transition-colors">Hide All</button>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <div className="relative flex-1">
+                                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+                                    <input
+                                        type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search repositories..."
+                                        className="w-full pl-9 pr-4 py-2.5 bg-white/5 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-red-500 transition-colors"
+                                    />
+                                </div>
+                                <div className="flex gap-1">
+                                    {(["all", "visible", "hidden"] as const).map(f => (
+                                        <button key={f} onClick={() => setFilter(f)}
+                                            className={`px-3 py-2.5 text-[9px] font-mono uppercase tracking-widest border transition-colors ${filter === f ? 'border-red-500 text-red-500 bg-red-500/10' : 'border-white/10 text-white/40 hover:text-white'}`}>
+                                            {f}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                {filteredRepos.length === 0 ? (
+                                    <div className="col-span-full text-center py-12 text-white/40 font-mono text-xs uppercase">No repositories match.</div>
+                                ) : filteredRepos.map(repo => {
+                                    const isHidden = hiddenIds.includes(repo.id);
+                                    return (
+                                        <div key={repo.id} className={`flex flex-col gap-3 p-4 border transition-all ${isHidden ? 'border-white/5 opacity-50 bg-white/5' : 'border-red-500/30 bg-red-500/5 hover:border-red-500'}`}>
+                                            <div className="flex justify-between items-start gap-2">
+                                                <h3 className="font-heading font-bold uppercase tracking-tight text-xs flex-1 leading-tight">{repo.name.replace(/-/g, ' ')}</h3>
+                                                {isHidden ? <EyeOff size={12} className="text-white/40 shrink-0" /> : <Eye size={12} className="text-red-500 shrink-0" />}
+                                            </div>
+                                            <div className="flex items-center gap-3 text-[9px] font-mono opacity-60">
+                                                {repo.language && <span>{repo.language}</span>}
+                                                {repo.stargazers_count > 0 && <span className="flex items-center gap-1"><Star size={9} /> {repo.stargazers_count}</span>}
+                                            </div>
+                                            <button onClick={() => toggleProject(repo.id, repo.name)}
+                                                className={`w-full py-2 font-mono text-[9px] uppercase tracking-widest border transition-all ${isHidden ? 'border-white/10 text-white/60 hover:border-red-500 hover:text-red-500' : 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white'}`}>
+                                                {isHidden ? 'Show on Site' : 'Hide from Site'}
+                                            </button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </motion.section>
+
+                        {/* Skills manager */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {[
+                                { title: "Technical Skills", cat: "tech" as const, list: techSkills, value: newTechSkill, setValue: setNewTechSkill },
+                                { title: "Soft Skills", cat: "non-tech" as const, list: nonTechSkills, value: newNonTechSkill, setValue: setNewNonTechSkill },
+                            ].map(section => (
+                                <motion.section
+                                    key={section.cat}
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="border border-white/10 bg-black/40 backdrop-blur-md p-6 flex flex-col gap-5"
+                                >
+                                    <h3 className="text-lg font-heading font-black uppercase text-red-500">{section.title}</h3>
+                                    <form onSubmit={(e) => addSkill(e, section.cat)} className="flex gap-2">
+                                        <input type="text" value={section.value} onChange={(e) => section.setValue(e.target.value)} placeholder={`Add ${section.title}...`}
+                                            className="flex-1 px-3 py-2 bg-white/5 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-red-500" />
+                                        <button type="submit" className="px-4 border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition-colors text-[10px] font-mono uppercase flex items-center gap-1">
+                                            <Plus size={12} /> Add
+                                        </button>
+                                    </form>
+                                    <div className="flex flex-wrap gap-2">
+                                        {section.list.map(skill => (
+                                            <div key={skill.id} className="group px-3 py-1.5 bg-white/5 border border-white/10 text-[11px] font-mono flex items-center gap-2 hover:border-red-500 transition-colors">
+                                                <span>{skill.name}</span>
+                                                <button onClick={() => removeSkill(skill.id, section.cat)} className="opacity-30 hover:opacity-100 hover:text-red-500"><Trash2 size={10} /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </motion.section>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </main>
+            <Footer />
+
+            <style>{`
+                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--primary)); }
+            `}</style>
+        </div>
+    );
 };
 
 export default Admin;
