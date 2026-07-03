@@ -1,15 +1,14 @@
 import React from 'react';
-import { Mail, MapPin, Linkedin, Instagram, Phone, PenTool, Twitter } from 'lucide-react';
+import { Mail, MapPin, Linkedin, Instagram, Phone, PenTool, Twitter, Youtube } from 'lucide-react';
 import ScrambleText from './ScrambleText';
 
 const Footer = () => {
     return (
-        <footer id="contact" className="relative py-12 px-6 cross-bg border-t border-white/10 z-10 overflow-hidden bg-black text-white">
-            {/* Visual Accent */}
+        <footer id="contact" className="relative py-16 px-6 cross-bg border-t border-white/10 z-10 overflow-hidden bg-black text-white">
             <div className="absolute top-0 right-0 w-64 h-64 border border-white/10 -translate-y-1/2 translate-x-1/2 rotate-45 pointer-events-none opacity-20" />
-            
+
             <div className="max-w-7xl mx-auto flex flex-col gap-12 relative">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-12 border-t border-white/10 pt-12">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10 md:gap-12 border-t border-white/10 pt-12">
                     <div className="flex flex-col gap-4">
                         <span className="text-[10px] font-mono opacity-40 uppercase tracking-widest text-red-600">
                             <ScrambleText text="Location" triggerOnHover />
@@ -17,8 +16,8 @@ const Footer = () => {
                         <div className="flex items-start gap-3 opacity-80 hover:opacity-100 transition-opacity">
                             <MapPin size={14} className="mt-1 flex-shrink-0 text-red-600" />
                             <p className="text-xs font-mono tracking-tight leading-relaxed">
-                                Namakkal District, Tamil Nadu<br/>
-                                India // 637203
+                                Kandampalayam, Tiruchengode<br/>
+                                Namakkal, Tamil Nadu — 637203
                             </p>
                         </div>
                     </div>
@@ -29,10 +28,10 @@ const Footer = () => {
                         </span>
                         <div className="flex flex-col gap-3">
                             <a href="mailto:sowmisowmiyan58@gmail.com" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
-                                <Mail size={14} className="text-red-600" /> <ScrambleText text="Email" triggerOnHover />
+                                <Mail size={14} className="text-red-600" /> Email
                             </a>
-                            <a href="https://wa.me/919042561295" target="_blank" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
-                                <Phone size={14} className="text-red-600" /> <ScrambleText text="WhatsApp" triggerOnHover />
+                            <a href="https://wa.me/919042561295" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
+                                <Phone size={14} className="text-red-600" /> WhatsApp
                             </a>
                         </div>
                     </div>
@@ -42,32 +41,37 @@ const Footer = () => {
                             <ScrambleText text="Social Media" triggerOnHover />
                         </span>
                         <div className="flex flex-col gap-3">
-                            <a href="https://linkedin.com/in/sowmiyan-s" target="_blank" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
-                                <Linkedin size={14} className="text-red-600" /> <ScrambleText text="LinkedIn" triggerOnHover />
+                            <a href="https://linkedin.com/in/sowmiyan-s" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
+                                <Linkedin size={14} className="text-red-600" /> LinkedIn
                             </a>
-                            <a href="https://instagram.com/sowmiyan.s_" target="_blank" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
-                                <Instagram size={14} className="text-red-600" /> <ScrambleText text="Instagram" triggerOnHover />
+                            <a href="https://youtube.com/@bound-by-code" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
+                                <Youtube size={14} className="text-red-600" /> YouTube
                             </a>
-                            <a href="https://twitter.com/sowmiyan_s" target="_blank" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
-                                <Twitter size={14} className="text-red-600" /> <ScrambleText text="X (Twitter)" triggerOnHover />
+                            <a href="https://instagram.com/sowmiyan.s_" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
+                                <Instagram size={14} className="text-red-600" /> Instagram
                             </a>
-                            <a href="https://medium.com/@sowmiyan_s_" target="_blank" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
-                                <PenTool size={14} className="text-red-600" /> <ScrambleText text="Medium" triggerOnHover />
+                            <a href="https://twitter.com/sowmiyan_s" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
+                                <Twitter size={14} className="text-red-600" /> X (Twitter)
+                            </a>
+                            <a href="https://medium.com/@sowmiyan_s_" target="_blank" rel="noreferrer" className="flex items-center gap-3 text-xs font-mono transition-colors hover:text-red-600 uppercase">
+                                <PenTool size={14} className="text-red-600" /> Medium
                             </a>
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-4 text-left md:text-right justify-between md:items-end">
-                        <div className="flex flex-col md:items-end gap-1">
-                            <a href="/admin" className="text-[10px] font-mono opacity-40 hover:opacity-100 hover:text-red-500 transition-all uppercase tracking-[0.4em]">Admin Panel</a>
-                        </div>
-                        <span className="text-[10px] font-mono opacity-40 tracking-widest uppercase italic mt-4 md:mt-0">© 2026 Sowmiyan S</span>
+                    <div className="flex flex-col gap-4 md:text-right md:items-end">
+                        <span className="text-[10px] font-mono opacity-40 uppercase tracking-widest text-red-600">
+                            <ScrambleText text="Signal" triggerOnHover />
+                        </span>
+                        <p className="text-xs font-mono opacity-70 leading-relaxed">
+                            Building intelligent systems<br/>from Tamil Nadu, India.
+                        </p>
+                        <span className="text-[10px] font-mono opacity-40 tracking-widest uppercase italic mt-auto">© 2026 Sowmiyan S</span>
                     </div>
                 </div>
             </div>
 
-            {/* Custom Scroll Indicator */}
-            <div className="absolute left-6 bottom-12 flex items-center gap-4 group cursor-pointer transition-colors" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
+            <div className="absolute left-6 bottom-6 flex items-center gap-4 group cursor-pointer transition-colors" onClick={() => window.scrollTo({top: 0, behavior: 'smooth'})}>
                 <div className="w-10 h-[1px] bg-red-600 group-hover:w-20 transition-all duration-300" />
                 <span className="text-[10px] font-mono uppercase opacity-40 group-hover:opacity-100 transition-opacity">Return to Origin</span>
             </div>

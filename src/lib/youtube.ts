@@ -81,7 +81,7 @@ function getCategoryFromTitle(title: string): string {
   return 'TECH';
 }
 
-export const fetchChannelVideos = async (channelIdOrHandle: string = 'UCIf9XVT_MbyZpi5v0SrvXRg'): Promise<YouTubeVideo[]> => {
+export const fetchChannelVideos = async (channelIdOrHandle: string = '@bound-by-code'): Promise<YouTubeVideo[]> => {
   const apiKey = import.meta.env.VITE_YOUTUBE_API_KEY;
   
   if (!apiKey) {
