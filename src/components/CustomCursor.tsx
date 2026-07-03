@@ -6,11 +6,18 @@ const CustomCursor = () => {
     const yLineRef = useRef<HTMLDivElement>(null);
     const coordsRef = useRef<HTMLDivElement>(null);
 
+    // Only enable on precise-pointer devices (skip touch/mobile for perf & UX)
+    const [enabled] = useState(() =>
+        typeof window !== 'undefined' &&
+        window.matchMedia('(hover: hover) and (pointer: fine)').matches
+    );
+
     const [isHovering, setIsHovering] = useState(false);
     const [isClicking, setIsClicking] = useState(false);
     const [shots, setShots] = useState<{ id: number, x: number, y: number }[]>([]);
 
     useEffect(() => {
+        if (!enabled) return;
         const moveCursor = (e: MouseEvent) => {
             const { clientX: x, clientY: y } = e;
             
