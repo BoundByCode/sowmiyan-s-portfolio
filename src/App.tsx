@@ -8,6 +8,7 @@ import Home from "./pages/Home.tsx";
 import AchievementsPage from "./pages/AchievementsPage.tsx";
 import ProjectsPage from "./pages/ProjectsPage.tsx";
 import AboutPage from "./pages/AboutPage.tsx";
+import ContactPage from "./pages/ContactPage.tsx";
 import Admin from "./pages/Admin.tsx";
 import ProjectDetail from "./pages/ProjectDetail.tsx";
 import NotFound from "./pages/NotFound.tsx";
@@ -77,6 +78,7 @@ const App = () => {
                         <Route path="/achievements" element={<AchievementsPage />} />
                         <Route path="/projects" element={<ProjectsPage />} />
                         <Route path="/about" element={<AboutPage />} />
+                        <Route path="/contact" element={<ContactPage />} />
                         <Route path="/admin" element={<Admin />} />
                         <Route path="/project/:id" element={<ProjectDetail />} />
                         <Route path="*" element={<NotFound />} /> 

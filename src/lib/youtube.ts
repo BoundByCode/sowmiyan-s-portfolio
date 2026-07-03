@@ -7,23 +7,8 @@ export interface YouTubeVideo {
   id?: string; // Add optional id to make visibility toggles easy
 }
 
+// Bound By Code — Sowmiyan's official YouTube channel (@bound-by-code)
 export const fallbackVideos: YouTubeVideo[] = [
-  {
-    id: "R9tFkC05g_g",
-    title: "Subway Surfers Desktop Open Source Project (தமிழ்)",
-    url: "https://www.youtube.com/watch?v=R9tFkC05g_g",
-    thumbnail: "https://img.youtube.com/vi/R9tFkC05g_g/hqdefault.jpg",
-    category: "OPEN SOURCE",
-    duration: "11:42"
-  },
-  {
-    id: "vte-fDoZczE",
-    title: "Cursor AI: The New Era of Coding! Say Goodbye to VS Code! [Tamil]",
-    url: "https://www.youtube.com/watch?v=vte-fDoZczE",
-    thumbnail: "https://img.youtube.com/vi/vte-fDoZczE/hqdefault.jpg",
-    category: "AI TOOLS",
-    duration: "14:15"
-  },
   {
     id: "qT4Z3yN-4S4",
     title: "Google Antigravity Explained: IDE vs 2.0 vs CLI in Tamil #geminiai #vibecoding",
@@ -47,6 +32,22 @@ export const fallbackVideos: YouTubeVideo[] = [
     thumbnail: "https://img.youtube.com/vi/Tw18-4U7mts/hqdefault.jpg",
     category: "TUTORIAL",
     duration: "22:05"
+  },
+  {
+    id: "vte-fDoZczE",
+    title: "Cursor AI: The New Era of Coding! Say Goodbye to VS Code! [Tamil]",
+    url: "https://www.youtube.com/watch?v=vte-fDoZczE",
+    thumbnail: "https://img.youtube.com/vi/vte-fDoZczE/hqdefault.jpg",
+    category: "AI TOOLS",
+    duration: "14:15"
+  },
+  {
+    id: "R9tFkC05g_g",
+    title: "Subway Surfers Desktop Open Source Project (Tamil)",
+    url: "https://www.youtube.com/watch?v=R9tFkC05g_g",
+    thumbnail: "https://img.youtube.com/vi/R9tFkC05g_g/hqdefault.jpg",
+    category: "OPEN SOURCE",
+    duration: "11:42"
   }
 ];
 
