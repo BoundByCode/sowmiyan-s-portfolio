@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { fetchRepos, GitHubRepo } from '@/lib/github';
 import { supabase } from '@/integrations/supabase/client';
+import { formatRepoName } from '@/lib/formatRepo';
 import TechNav from '@/components/TechNav';
 import Footer from '@/components/Footer';
 import CyberBackground from '@/components/CyberBackground';
@@ -18,6 +19,7 @@ const Admin = () => {
 
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
     const [hiddenIds, setHiddenIds] = useState<number[]>([]);
+    const [featuredIds, setFeaturedIds] = useState<number[]>([]);
     const [loading, setLoading] = useState(true);
     const [techSkills, setTechSkills] = useState<{ id: string; name: string }[]>([]);
     const [nonTechSkills, setNonTechSkills] = useState<{ id: string; name: string }[]>([]);
@@ -25,19 +27,45 @@ const Admin = () => {
     const [newNonTechSkill, setNewNonTechSkill] = useState('');
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<"all" | "visible" | "hidden">("all");
+    const [showDividers, setShowDividers] = useState(true);
+    const [showGlobalTicker, setShowGlobalTicker] = useState(true);
 
     const loadData = async () => {
         setLoading(true);
-        const [repoData, { data: hiddenRows }, { data: skillRows }] = await Promise.all([
+        const [repoData, hiddenRes, skillRes, featuredRes, settingsRes] = await Promise.all([
             fetchRepos(),
             supabase.from('hidden_projects').select('github_repo_id'),
             supabase.from('skills').select('id, name, category'),
+            supabase.from('featured_projects').select('github_repo_id'),
+            supabase.from('site_settings').select('key, value'),
         ]);
         setRepos(repoData);
-        setHiddenIds((hiddenRows || []).map(r => r.github_repo_id));
-        setTechSkills((skillRows || []).filter(s => s.category === 'tech').map(s => ({ id: s.id, name: s.name })));
-        setNonTechSkills((skillRows || []).filter(s => s.category === 'non-tech').map(s => ({ id: s.id, name: s.name })));
+        setHiddenIds((hiddenRes.data ?? []).map((r: any) => r.github_repo_id));
+        setFeaturedIds((featuredRes.data ?? []).map((r: any) => r.github_repo_id));
+        setTechSkills((skillRes.data ?? []).filter((s: any) => s.category === 'tech').map((s: any) => ({ id: s.id, name: s.name })));
+        setNonTechSkills((skillRes.data ?? []).filter((s: any) => s.category === 'non-tech').map((s: any) => ({ id: s.id, name: s.name })));
+        for (const row of settingsRes.data ?? []) {
+            if (row.key === 'show_dividers') setShowDividers(!!row.value);
+            if (row.key === 'show_global_ticker') setShowGlobalTicker(!!row.value);
+        }
         setLoading(false);
+    };
+
+    const toggleFeatured = async (repo: GitHubRepo) => {
+        if (featuredIds.includes(repo.id)) {
+            await supabase.from('featured_projects').delete().eq('github_repo_id', repo.id);
+            setFeaturedIds(prev => prev.filter(id => id !== repo.id));
+        } else {
+            if (featuredIds.length >= 3) { alert('Max 3 featured projects. Unfeature one first.'); return; }
+            await supabase.from('featured_projects').insert({ github_repo_id: repo.id, repo_name: repo.name, position: featuredIds.length });
+            setFeaturedIds(prev => [...prev, repo.id]);
+        }
+    };
+
+    const setSetting = async (key: string, value: boolean) => {
+        await supabase.from('site_settings').upsert({ key, value: value as any, updated_at: new Date().toISOString() }, { onConflict: 'key' });
+        if (key === 'show_dividers') setShowDividers(value);
+        if (key === 'show_global_ticker') setShowGlobalTicker(value);
     };
 
     useEffect(() => { if (authed) loadData(); }, [authed]);
@@ -232,20 +260,30 @@ const Admin = () => {
                                     <div className="col-span-full text-center py-12 text-white/40 font-mono text-xs uppercase">No repositories match.</div>
                                 ) : filteredRepos.map(repo => {
                                     const isHidden = hiddenIds.includes(repo.id);
+                                    const isFeatured = featuredIds.includes(repo.id);
                                     return (
-                                        <div key={repo.id} className={`flex flex-col gap-3 p-4 border transition-all ${isHidden ? 'border-white/5 opacity-50 bg-white/5' : 'border-red-500/30 bg-red-500/5 hover:border-red-500'}`}>
+                                        <div key={repo.id} className={`flex flex-col gap-3 p-4 border transition-all ${isHidden ? 'border-white/5 opacity-50 bg-white/5' : isFeatured ? 'border-yellow-500/50 bg-yellow-500/5' : 'border-red-500/30 bg-red-500/5 hover:border-red-500'}`}>
                                             <div className="flex justify-between items-start gap-2">
-                                                <h3 className="font-heading font-bold uppercase tracking-tight text-xs flex-1 leading-tight">{repo.name.replace(/-/g, ' ')}</h3>
+                                                <h3 className="font-heading font-bold uppercase tracking-tight text-xs flex-1 leading-tight">{formatRepoName(repo.name)}</h3>
                                                 {isHidden ? <EyeOff size={12} className="text-white/40 shrink-0" /> : <Eye size={12} className="text-red-500 shrink-0" />}
                                             </div>
                                             <div className="flex items-center gap-3 text-[9px] font-mono opacity-60">
                                                 {repo.language && <span>{repo.language}</span>}
                                                 {repo.stargazers_count > 0 && <span className="flex items-center gap-1"><Star size={9} /> {repo.stargazers_count}</span>}
+                                                {isFeatured && <span className="text-yellow-500">★ FEATURED</span>}
                                             </div>
-                                            <button onClick={() => toggleProject(repo.id, repo.name)}
-                                                className={`w-full py-2 font-mono text-[9px] uppercase tracking-widest border transition-all ${isHidden ? 'border-white/10 text-white/60 hover:border-red-500 hover:text-red-500' : 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white'}`}>
-                                                {isHidden ? 'Show on Site' : 'Hide from Site'}
-                                            </button>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => toggleProject(repo.id, repo.name)}
+                                                    className={`flex-1 py-2 font-mono text-[9px] uppercase tracking-widest border transition-all ${isHidden ? 'border-white/10 text-white/60 hover:border-red-500 hover:text-red-500' : 'border-red-500 text-red-500 hover:bg-red-500 hover:text-white'}`}>
+                                                    {isHidden ? 'Show' : 'Hide'}
+                                                </button>
+                                                {!isHidden && (
+                                                    <button onClick={() => toggleFeatured(repo)}
+                                                        className={`flex-1 py-2 font-mono text-[9px] uppercase tracking-widest border transition-all ${isFeatured ? 'border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black' : 'border-white/10 text-white/60 hover:border-yellow-500 hover:text-yellow-500'}`}>
+                                                        {isFeatured ? '★ Unfeature' : '☆ Feature'}
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -283,6 +321,32 @@ const Admin = () => {
                                 </motion.section>
                             ))}
                         </div>
+
+                        {/* Site Settings */}
+                        <motion.section
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="border border-white/10 bg-black/40 backdrop-blur-md p-6 flex flex-col gap-5"
+                        >
+                            <div>
+                                <h2 className="text-xl font-heading font-black uppercase text-red-500">Site Settings</h2>
+                                <p className="text-[10px] font-mono opacity-60 uppercase tracking-widest">Global visual toggles.</p>
+                            </div>
+                            {[
+                                { key: 'show_dividers', label: 'Show name-ticker dividers between home sections', value: showDividers },
+                                { key: 'show_global_ticker', label: 'Show global name-ticker at bottom of every page', value: showGlobalTicker },
+                            ].map(s => (
+                                <label key={s.key} className="flex items-center justify-between gap-4 p-3 border border-white/10 hover:border-red-500/50 cursor-pointer">
+                                    <span className="text-xs font-mono">{s.label}</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={s.value}
+                                        onChange={(e) => setSetting(s.key, e.target.checked)}
+                                        className="w-4 h-4 accent-red-500"
+                                    />
+                                </label>
+                            ))}
+                        </motion.section>
                     </div>
                 </div>
             </main>
