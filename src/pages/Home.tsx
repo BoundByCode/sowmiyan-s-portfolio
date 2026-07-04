@@ -49,11 +49,12 @@ const Home = () => {
                     </div>
                 </Pattern>
 
+                <MarqueeSection />
+
                 <div className="relative w-full z-[5] bg-transparent flex items-center py-6 md:py-8">
                     <HireMeSection />
                 </div>
 
-                <MarqueeSection />
 
                 <div className="relative z-[7] bg-black w-full">
                     <Footer />

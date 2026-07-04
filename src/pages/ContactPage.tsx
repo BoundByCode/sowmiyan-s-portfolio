@@ -7,7 +7,6 @@ import CyberBackground from '@/components/CyberBackground';
 import TopographicBackground from '@/components/TopographicBackground';
 import PageHero from '@/components/PageHero';
 import ScrambleText from '@/components/ScrambleText';
-import ScrambleText from '@/components/ScrambleText';
 
 const ContactPage = () => {
     return (
