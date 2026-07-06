@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { fetchRepos, GitHubRepo } from '@/lib/github';
+import { fetchChannelVideos, YouTubeVideo } from '@/lib/youtube';
 import { supabase } from '@/integrations/supabase/client';
 import { formatRepoName } from '@/lib/formatRepo';
 import TechNav from '@/components/TechNav';
@@ -7,10 +8,11 @@ import Footer from '@/components/Footer';
 import CyberBackground from '@/components/CyberBackground';
 import PageHero from '@/components/PageHero';
 import { motion } from 'framer-motion';
-import { Star, Eye, EyeOff, Trash2, Plus, Search, Lock } from 'lucide-react';
+import { Star, Eye, EyeOff, Trash2, Plus, Search, Lock, ArrowUp, ArrowDown, RefreshCw, Youtube } from 'lucide-react';
 
 const ADMIN_PASSWORD = "121212";
 const AUTH_KEY = "adminAuthenticated";
+type SortMode = "updated" | "stars" | "name";
 
 const Admin = () => {
     const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === "true");
@@ -19,7 +21,7 @@ const Admin = () => {
 
     const [repos, setRepos] = useState<GitHubRepo[]>([]);
     const [hiddenIds, setHiddenIds] = useState<number[]>([]);
-    const [featuredIds, setFeaturedIds] = useState<number[]>([]);
+    const [featured, setFeatured] = useState<{ id: number; repo_name: string; position: number }[]>([]);
     const [loading, setLoading] = useState(true);
     const [techSkills, setTechSkills] = useState<{ id: string; name: string }[]>([]);
     const [nonTechSkills, setNonTechSkills] = useState<{ id: string; name: string }[]>([]);
@@ -27,8 +29,13 @@ const Admin = () => {
     const [newNonTechSkill, setNewNonTechSkill] = useState('');
     const [search, setSearch] = useState("");
     const [filter, setFilter] = useState<"all" | "visible" | "hidden">("all");
+    const [sortMode, setSortMode] = useState<SortMode>("updated");
     const [showDividers, setShowDividers] = useState(true);
     const [showGlobalTicker, setShowGlobalTicker] = useState(true);
+    const [videos, setVideos] = useState<YouTubeVideo[]>([]);
+    const [videosLoading, setVideosLoading] = useState(false);
+
+    const featuredIds = featured.map(f => f.id);
 
     const loadData = async () => {
         setLoading(true);
@@ -36,12 +43,12 @@ const Admin = () => {
             fetchRepos(),
             supabase.from('hidden_projects').select('github_repo_id'),
             supabase.from('skills').select('id, name, category'),
-            supabase.from('featured_projects').select('github_repo_id'),
+            supabase.from('featured_projects').select('github_repo_id, repo_name, position').order('position', { ascending: true }),
             supabase.from('site_settings').select('key, value'),
         ]);
         setRepos(repoData);
         setHiddenIds((hiddenRes.data ?? []).map((r: any) => r.github_repo_id));
-        setFeaturedIds((featuredRes.data ?? []).map((r: any) => r.github_repo_id));
+        setFeatured((featuredRes.data ?? []).map((r: any) => ({ id: r.github_repo_id, repo_name: r.repo_name, position: r.position ?? 0 })));
         setTechSkills((skillRes.data ?? []).filter((s: any) => s.category === 'tech').map((s: any) => ({ id: s.id, name: s.name })));
         setNonTechSkills((skillRes.data ?? []).filter((s: any) => s.category === 'non-tech').map((s: any) => ({ id: s.id, name: s.name })));
         for (const row of settingsRes.data ?? []) {
@@ -51,15 +58,37 @@ const Admin = () => {
         setLoading(false);
     };
 
+    const loadVideos = async () => {
+        setVideosLoading(true);
+        const v = await fetchChannelVideos();
+        setVideos(v);
+        setVideosLoading(false);
+    };
+
     const toggleFeatured = async (repo: GitHubRepo) => {
         if (featuredIds.includes(repo.id)) {
             await supabase.from('featured_projects').delete().eq('github_repo_id', repo.id);
-            setFeaturedIds(prev => prev.filter(id => id !== repo.id));
+            setFeatured(prev => prev.filter(f => f.id !== repo.id));
         } else {
-            if (featuredIds.length >= 3) { alert('Max 3 featured projects. Unfeature one first.'); return; }
-            await supabase.from('featured_projects').insert({ github_repo_id: repo.id, repo_name: repo.name, position: featuredIds.length });
-            setFeaturedIds(prev => [...prev, repo.id]);
+            if (featured.length >= 3) { alert('Max 3 featured projects. Unfeature one first.'); return; }
+            const position = featured.length;
+            await supabase.from('featured_projects').insert({ github_repo_id: repo.id, repo_name: repo.name, position });
+            setFeatured(prev => [...prev, { id: repo.id, repo_name: repo.name, position }]);
         }
+    };
+
+    const moveFeatured = async (idx: number, dir: -1 | 1) => {
+        const next = [...featured];
+        const target = idx + dir;
+        if (target < 0 || target >= next.length) return;
+        [next[idx], next[target]] = [next[target], next[idx]];
+        const withPos = next.map((f, i) => ({ ...f, position: i }));
+        setFeatured(withPos);
+        await Promise.all(
+            withPos.map(f =>
+                supabase.from('featured_projects').update({ position: f.position }).eq('github_repo_id', f.id)
+            )
+        );
     };
 
     const setSetting = async (key: string, value: boolean) => {
@@ -68,7 +97,7 @@ const Admin = () => {
         if (key === 'show_global_ticker') setShowGlobalTicker(value);
     };
 
-    useEffect(() => { if (authed) loadData(); }, [authed]);
+    useEffect(() => { if (authed) { loadData(); loadVideos(); } }, [authed]);
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
@@ -175,7 +204,11 @@ const Admin = () => {
             return true;
         })
         .filter(r => r.name.toLowerCase().includes(search.toLowerCase()))
-        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+        .sort((a, b) => {
+            if (sortMode === "stars") return b.stargazers_count - a.stargazers_count;
+            if (sortMode === "name") return a.name.localeCompare(b.name);
+            return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
 
     const visibleCount = repos.length - hiddenIds.length;
 
@@ -253,7 +286,34 @@ const Admin = () => {
                                         </button>
                                     ))}
                                 </div>
+                                <select
+                                    value={sortMode}
+                                    onChange={e => setSortMode(e.target.value as SortMode)}
+                                    className="px-3 py-2.5 bg-white/5 border border-white/10 text-white text-[10px] font-mono uppercase tracking-widest focus:outline-none focus:border-red-500"
+                                >
+                                    <option value="updated">Sort: Updated</option>
+                                    <option value="stars">Sort: Stars</option>
+                                    <option value="name">Sort: Name</option>
+                                </select>
                             </div>
+
+                            {/* Featured order */}
+                            {featured.length > 0 && (
+                                <div className="border border-yellow-500/30 bg-yellow-500/5 p-4 flex flex-col gap-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-mono uppercase tracking-widest text-yellow-500">★ Featured Order ({featured.length}/3)</span>
+                                        <span className="text-[9px] font-mono opacity-40 uppercase">Homepage slider order</span>
+                                    </div>
+                                    {featured.map((f, i) => (
+                                        <div key={f.id} className="flex items-center gap-2 py-1.5 px-2 bg-black/40 border border-white/5">
+                                            <span className="text-yellow-500 font-mono text-[10px] w-4">{i + 1}</span>
+                                            <span className="flex-1 text-xs font-heading uppercase tracking-tight truncate">{formatRepoName(f.repo_name)}</span>
+                                            <button onClick={() => moveFeatured(i, -1)} disabled={i === 0} className="p-1 border border-white/10 hover:border-yellow-500 hover:text-yellow-500 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ArrowUp size={10} /></button>
+                                            <button onClick={() => moveFeatured(i, 1)} disabled={i === featured.length - 1} className="p-1 border border-white/10 hover:border-yellow-500 hover:text-yellow-500 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"><ArrowDown size={10} /></button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
                                 {filteredRepos.length === 0 ? (
@@ -321,6 +381,47 @@ const Admin = () => {
                                 </motion.section>
                             ))}
                         </div>
+
+                        {/* YouTube preview */}
+                        <motion.section
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="border border-white/10 bg-black/40 backdrop-blur-md p-6 flex flex-col gap-5"
+                        >
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <Youtube size={20} className="text-red-500" />
+                                    <div>
+                                        <h2 className="text-xl font-heading font-black uppercase text-red-500">YouTube Feed</h2>
+                                        <p className="text-[10px] font-mono opacity-60 uppercase tracking-widest">Live from @bound-by-code · {videos.length} videos</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={loadVideos}
+                                    disabled={videosLoading}
+                                    className="flex items-center gap-2 px-3 py-2 text-[10px] font-mono uppercase tracking-widest border border-white/10 hover:border-red-500 hover:text-red-500 transition-colors disabled:opacity-50"
+                                >
+                                    <RefreshCw size={12} className={videosLoading ? 'animate-spin' : ''} /> Refresh
+                                </button>
+                            </div>
+                            {videosLoading ? (
+                                <div className="text-center py-8 font-mono text-xs opacity-40 uppercase">Fetching…</div>
+                            ) : videos.length === 0 ? (
+                                <div className="text-center py-8 font-mono text-xs text-red-500/70 uppercase">No videos returned. Check channel ID / edge function.</div>
+                            ) : (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                                    {videos.slice(0, 8).map(v => (
+                                        <a key={v.id} href={v.url} target="_blank" rel="noreferrer" className="flex flex-col gap-2 border border-white/10 hover:border-red-500 transition-colors group">
+                                            <div className="aspect-video overflow-hidden">
+                                                <img src={v.thumbnail} alt={v.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                            </div>
+                                            <p className="text-[10px] font-mono px-2 pb-2 line-clamp-2 opacity-70 group-hover:opacity-100 group-hover:text-red-500 transition-colors">{v.title}</p>
+                                        </a>
+                                    ))}
+                                </div>
+                            )}
+                        </motion.section>
+
 
                         {/* Site Settings */}
                         <motion.section
