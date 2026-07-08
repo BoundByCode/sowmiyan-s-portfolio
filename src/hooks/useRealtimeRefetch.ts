@@ -10,8 +10,7 @@ export function useRealtimeRefetch(tables: string[], refetch: () => void) {
     if (!tables.length) return;
     const channel = supabase.channel(`rt-${tables.join("-")}-${Math.random().toString(36).slice(2, 8)}`);
     tables.forEach((table) => {
-      channel.on(
-        // @ts-expect-error - postgres_changes typing is loose in supabase-js
+      (channel as any).on(
         "postgres_changes",
         { event: "*", schema: "public", table },
         () => refetch(),
