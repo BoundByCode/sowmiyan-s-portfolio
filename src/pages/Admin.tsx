@@ -303,14 +303,34 @@ const Admin = () => {
                     <div className="max-w-7xl mx-auto flex flex-col gap-8">
                         {/* Session bar */}
                         <div className="flex flex-wrap items-center justify-between gap-3 border border-red-600/30 bg-red-600/5 p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
-                                <span className="text-[10px] font-mono uppercase tracking-widest text-red-500">Session Active</span>
+                            <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 bg-red-600 rounded-full animate-pulse" />
+                                    <span className="text-[10px] font-mono uppercase tracking-widest text-red-500">Session Active</span>
+                                </div>
+                                <div className="flex items-center gap-2 border-l border-white/10 pl-4">
+                                    <Radio size={12} className="text-green-400 animate-pulse" />
+                                    <span className="text-[10px] font-mono uppercase tracking-widest text-green-400">Live · Realtime sync</span>
+                                    {liveTick > 0 && <span className="text-[9px] font-mono opacity-40">·{liveTick}</span>}
+                                </div>
                             </div>
-                            <button onClick={logout} className="text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-red-500 transition-colors">
-                                Terminate Session →
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button onClick={exportConfig} className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border border-white/10 hover:border-green-500 hover:text-green-500 transition-colors">
+                                    <Download size={11} /> Export
+                                </button>
+                                <button onClick={() => importInputRef.current?.click()} className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border border-white/10 hover:border-yellow-500 hover:text-yellow-500 transition-colors">
+                                    <Upload size={11} /> Import
+                                </button>
+                                <input ref={importInputRef} type="file" accept="application/json" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) importConfig(f); e.currentTarget.value = ''; }} />
+                                <button onClick={loadData} className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-mono uppercase tracking-widest border border-white/10 hover:border-red-500 hover:text-red-500 transition-colors">
+                                    <RefreshCw size={11} /> Sync
+                                </button>
+                                <button onClick={logout} className="text-[10px] font-mono uppercase tracking-widest text-white/60 hover:text-red-500 transition-colors">
+                                    Terminate →
+                                </button>
+                            </div>
                         </div>
+
 
                         {/* Stats */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
