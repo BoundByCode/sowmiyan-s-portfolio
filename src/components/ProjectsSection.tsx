@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useRealtimeRefetch } from "@/hooks/useRealtimeRefetch";
+
 import { motion } from "framer-motion";
 import { Github, Star, GitFork } from "lucide-react";
 import { fetchRepos } from "@/lib/github";
