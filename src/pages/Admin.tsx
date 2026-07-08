@@ -105,9 +105,73 @@ const Admin = () => {
         await supabase.from('site_settings').upsert({ key, value: value as any, updated_at: new Date().toISOString() }, { onConflict: 'key' });
         if (key === 'show_dividers') setShowDividers(value);
         if (key === 'show_global_ticker') setShowGlobalTicker(value);
+        toast({ title: 'Setting saved', description: `${key} → ${value ? 'ON' : 'OFF'}` });
+    };
+
+    const renameSkill = async (id: string, name: string, category: 'tech' | 'non-tech') => {
+        const trimmed = name.trim();
+        if (!trimmed) return;
+        await supabase.from('skills').update({ name: trimmed }).eq('id', id);
+        const map = (arr: {id: string; name: string}[]) => arr.map(s => s.id === id ? { ...s, name: trimmed } : s);
+        if (category === 'tech') setTechSkills(map);
+        else setNonTechSkills(map);
+        setEditingSkillId(null);
+        toast({ title: 'Skill renamed', description: trimmed });
+    };
+
+    const bulkAddSkills = async (raw: string, category: 'tech' | 'non-tech') => {
+        const names = raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+        if (!names.length) return;
+        const rows = names.map(name => ({ name, category }));
+        const { data } = await supabase.from('skills').insert(rows).select('id, name');
+        if (data) {
+            if (category === 'tech') { setTechSkills(prev => [...prev, ...data]); setBulkTech(''); }
+            else { setNonTechSkills(prev => [...prev, ...data]); setBulkNonTech(''); }
+            toast({ title: 'Skills added', description: `${data.length} × ${category}` });
+        }
+    };
+
+    const exportConfig = async () => {
+        const payload = {
+            exported_at: new Date().toISOString(),
+            hidden: hiddenIds,
+            featured,
+            skills: { tech: techSkills.map(s => s.name), nonTech: nonTechSkills.map(s => s.name) },
+            settings: { show_dividers: showDividers, show_global_ticker: showGlobalTicker },
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = `portfolio-config-${Date.now()}.json`; a.click();
+        URL.revokeObjectURL(url);
+        toast({ title: 'Config exported' });
+    };
+
+    const importConfig = async (file: File) => {
+        try {
+            const text = await file.text();
+            const cfg = JSON.parse(text);
+            if (cfg.settings) {
+                await Promise.all([
+                    supabase.from('site_settings').upsert({ key: 'show_dividers', value: cfg.settings.show_dividers, updated_at: new Date().toISOString() }, { onConflict: 'key' }),
+                    supabase.from('site_settings').upsert({ key: 'show_global_ticker', value: cfg.settings.show_global_ticker, updated_at: new Date().toISOString() }, { onConflict: 'key' }),
+                ]);
+            }
+            await loadData();
+            toast({ title: 'Config imported' });
+        } catch (e) {
+            toast({ title: 'Import failed', description: (e as Error).message });
+        }
     };
 
     useEffect(() => { if (authed) { loadData(); loadVideos(); } }, [authed]);
+
+    // Realtime: refresh admin data when any admin table changes (across tabs / devices).
+    useRealtimeRefetch(
+        authed ? ['featured_projects', 'hidden_projects', 'skills', 'site_settings'] : [],
+        () => { setLiveTick(t => t + 1); loadData(); }
+    );
+
 
     const handleLogin = (e: React.FormEvent) => {
         e.preventDefault();
