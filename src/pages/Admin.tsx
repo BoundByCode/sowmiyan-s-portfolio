@@ -37,6 +37,13 @@ const Admin = () => {
     const [showGlobalTicker, setShowGlobalTicker] = useState(true);
     const [videos, setVideos] = useState<YouTubeVideo[]>([]);
     const [videosLoading, setVideosLoading] = useState(false);
+    const [editingSkillId, setEditingSkillId] = useState<string | null>(null);
+    const [editingSkillName, setEditingSkillName] = useState('');
+    const [bulkTech, setBulkTech] = useState('');
+    const [bulkNonTech, setBulkNonTech] = useState('');
+    const [liveTick, setLiveTick] = useState(0);
+    const importInputRef = useRef<HTMLInputElement>(null);
+
 
     const featuredIds = featured.map(f => f.id);
 
