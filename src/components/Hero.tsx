@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import ScrambleText from './ScrambleText';
+import UpvoteButton from './UpvoteButton';
 
 const Hero = () => {
     const containerRef = useRef<HTMLDivElement>(null);
@@ -22,11 +23,14 @@ const Hero = () => {
             
             <motion.div style={{ y, opacity }} className="max-w-7xl w-full flex flex-col items-start gap-8 md:gap-12 relative z-20 mt-12 md:mt-16">
                 <div className="flex flex-col items-start gap-4 md:gap-6 w-full text-left">
-                    <div className="relative group cursor-none w-full pr-2 overflow-hidden">
-                        <h1 className="text-[clamp(2rem,7vw,8rem)] font-heading font-black leading-[1] tracking-tighter text-white uppercase transition-all group-hover:scale-[1.02] whitespace-nowrap drop-shadow-[0_0_25px_rgba(255,255,255,0.3)]">
+                    <div className="relative w-full pr-2 overflow-hidden">
+                        <h1 className="text-[clamp(2rem,7vw,8rem)] font-heading font-black leading-[1] tracking-tighter text-white uppercase whitespace-nowrap drop-shadow-[0_0_25px_rgba(255,255,255,0.3)]">
                             <ScrambleText text="SOWMIYAN S" triggerOnView speed={0.5} delay={0.2} />
                         </h1>
                     </div>
+
+                    <UpvoteButton />
+
                     
                     <div className="flex flex-wrap justify-start items-center gap-2 md:gap-3 text-[10px] md:text-sm font-mono uppercase tracking-[0.1em] md:tracking-[0.25em] text-red-500 font-bold border border-white/10 bg-white/5 shadow-[0_0_20px_rgba(255,0,0,0.1)] rounded-2xl md:rounded-3xl px-4 py-2 md:px-6 md:py-3 max-w-[85vw] sm:max-w-full">
                         <ScrambleText text="AI Engineer" triggerOnView triggerOnHover delay={0.8} />
